@@ -1,0 +1,2 @@
+Date (YYYY-MM-DD),Time (HH:MM:SS),Temperature (F),Dew Point (F),Humidity (%),Wind Speed (mph),Wind Direction (degrees),Pressure at Sea Level (inHg),Precipitation Intensity (in/hr),Rain Intensity (in/hr),Precipitation Probability (%),Precipitation Type,Rain Accumulation (in),Visibility (mi),Cloud Cover (%),Cloud Base (mi),Cloud Ceiling (mi),UV Index,Evapotranspiration (in),Thunderstorm Probability (%)
+2025-12-28,13:00:00,68.1,42.6,89,5.9,199,30.16,0,0,0,0,0,9.94,85,9.9,7.3,3,0.007,0
