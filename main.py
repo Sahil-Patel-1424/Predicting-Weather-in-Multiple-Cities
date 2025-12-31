@@ -33,7 +33,40 @@ print("==============================\n")
 # 4. Use global variables to store API data to make it easier to access and use object-oriented programming
 # 5. Use functions to modernize the code
 
-def main():
+def write_to_csv_file():
+    # check if the CSV file exists. else, create the CSV file.
+    global csv_file_path
+    csv_file_path = 'phoenix_weather_data.csv'
+
+    if (os.path.exists(csv_file_path) == False):
+        # store the results in a CSV file
+        with open(csv_file_path, mode='w', newline='') as csv_file:
+            writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            writer.writerow(['Date (YYYY-MM-DD)', 'Time (HH:MM:SS)', 'Temperature (F)', 'Dew Point (F)', 'Humidity (%)', 'Wind Speed (mph)', 'Wind Direction (degrees)', 'Pressure at Sea Level (inHg)', 'Precipitation Intensity (in/hr)', 'Rain Intensity (in/hr)', 'Precipitation Probability (%)', 'Precipitation Type', 'Rain Accumulation (in)', 'Visibility (mi)', 'Cloud Cover (%)', 'Cloud Base (mi)', 'Cloud Ceiling (mi)', 'UV Index', 'Evapotranspiration (in)', 'Thunderstorm Probability (%)'])
+            writer.writerow([date, time, temperature, dew_point, humidity, wind_speed, wind_direction, pressure_sea_level, precipitation_intensity, rain_intensity, precipitation_probability, precipitation_type, rain_accumulation, visibility, cloud_cover, cloud_base, cloud_ceiling, uv_index, evapotranspiration, thunderstorm_probability])
+            print(f"\nSuccessfully created new CSV file. Today's ({date}) data has been recorded in the CSV file.\n")
+    else:
+        # check if today's data has already been recorded. else, store today's data in the CSV file.
+        recorded = False
+        with open(csv_file_path, mode='r', newline='') as csv_file:
+            reader = csv.reader(csv_file, delimiter=',', quotechar='"')
+            for row in reader:
+                if (row[0] == date):
+                    recorded = True
+                    print(f"\nToday's ({date}) data has already been recorded in the CSV file. Ignoring entry...\n")
+                    break
+        
+        # check if today's data has not been recorded
+        if (recorded == False):
+            # store today's data in the CSV file
+            with open(csv_file_path, mode='a', newline='') as csv_file:
+                writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                writer.writerow([date, time, temperature, dew_point, humidity, wind_speed, wind_direction, pressure_sea_level, precipitation_intensity, rain_intensity, precipitation_probability, precipitation_type, rain_accumulation, visibility, cloud_cover, cloud_base, cloud_ceiling, uv_index, evapotranspiration, thunderstorm_probability])
+                print(f"\nToday's ({date}) data has been recorded in the CSV file.\n")
+    return
+
+def api_request():
+    # grab the weather data from Tomorrow.io API
     url = "https://api.tomorrow.io/v4/timelines"
     query = {
         "location": "33.464473, -112.166824",
@@ -54,6 +87,7 @@ def main():
     data = json.loads(response.text)
 
     # parse through the API data to extract today's information (they are already global variables)
+    global date, time, temperature, dew_point, humidity, wind_speed, wind_direction, pressure_sea_level, precipitation_intensity, rain_intensity, precipitation_probability, precipitation_type, rain_accumulation, visibility, cloud_cover, cloud_base, cloud_ceiling, uv_index, evapotranspiration, thunderstorm_probability
     date = data['data']['timelines'][0]['intervals'][0]['startTime'][0:10]                                          # YYYY-MM-DD
     time = data['data']['timelines'][0]['intervals'][0]['startTime'][11:19]                                         # HH:MM:SS (24-hour clock)
     temperature = data['data']['timelines'][0]['intervals'][0]['values']['temperature']                             # degrees Fahrenheit
@@ -96,35 +130,11 @@ def main():
     print(f"UV Index: {uv_index} (0-2: Low, 3-5: Moderate, 6-7: High, 8-10: Very High, 11+: Extreme)")
     print(f"Evapotranspiration: {evapotranspiration} in")
     print(f"Thunderstorm Probability: {thunderstorm_probability}%")
+    return
 
-    # check if the CSV file exists. else, create the CSV file.
-    csv_file_path = 'phoenix_weather_data.csv'
-
-    if (os.path.exists(csv_file_path) == False):
-        # store the results in a CSV file
-        with open(csv_file_path, mode='w', newline='') as csv_file:
-            writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow(['Date (YYYY-MM-DD)', 'Time (HH:MM:SS)', 'Temperature (F)', 'Dew Point (F)', 'Humidity (%)', 'Wind Speed (mph)', 'Wind Direction (degrees)', 'Pressure at Sea Level (inHg)', 'Precipitation Intensity (in/hr)', 'Rain Intensity (in/hr)', 'Precipitation Probability (%)', 'Precipitation Type', 'Rain Accumulation (in)', 'Visibility (mi)', 'Cloud Cover (%)', 'Cloud Base (mi)', 'Cloud Ceiling (mi)', 'UV Index', 'Evapotranspiration (in)', 'Thunderstorm Probability (%)'])
-            writer.writerow([date, time, temperature, dew_point, humidity, wind_speed, wind_direction, pressure_sea_level, precipitation_intensity, rain_intensity, precipitation_probability, precipitation_type, rain_accumulation, visibility, cloud_cover, cloud_base, cloud_ceiling, uv_index, evapotranspiration, thunderstorm_probability])
-            print(f"\nSuccessfully created new CSV file. Today's ({date}) data has been recorded in the CSV file.\n")
-    else:
-        # check if today's data has already been recorded. else, store today's data in the CSV file.
-        recorded = False
-        with open(csv_file_path, mode='r', newline='') as csv_file:
-            reader = csv.reader(csv_file, delimiter=',', quotechar='"')
-            for row in reader:
-                if (row[0] == date):
-                    recorded = True
-                    print(f"\nToday's ({date}) data has already been recorded in the CSV file. Ignoring entry...\n")
-                    break
-        
-        # check if today's data has not been recorded
-        if (recorded == False):
-            # store today's data in the CSV file
-            with open(csv_file_path, mode='a', newline='') as csv_file:
-                writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                writer.writerow([date, time, temperature, dew_point, humidity, wind_speed, wind_direction, pressure_sea_level, precipitation_intensity, rain_intensity, precipitation_probability, precipitation_type, rain_accumulation, visibility, cloud_cover, cloud_base, cloud_ceiling, uv_index, evapotranspiration, thunderstorm_probability])
-                print(f"\nToday's ({date}) data has been recorded in the CSV file.\n")
-        return
+def main():
+    api_request()
+    write_to_csv_file()
+    return
     
 main()
