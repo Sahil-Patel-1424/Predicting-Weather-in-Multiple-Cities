@@ -3,9 +3,82 @@ import requests
 import json
 import csv
 import os
+import discord
+from dotenv import load_dotenv
+import logging
+
+def discord_bot_notification():
+    # prepare the Discord message
+    discord_message = (
+        f"\nThe temperature in Phoenix (at the State Farm Stadium) today (**{date}**) at **{time}** hours is **{temperature}** °F with **{cloud_cover}%** cloud cover\n\n"
+        f"__Here is the rest of today's (**{date}**) information at **{time}** hours:__\n"
+        f"**Temperature:** {temperature} °F\n"
+        f"**Dew Point:** {dew_point} °F\n"
+        f"**Humidity:** {humidity}%\n"
+        f"**Wind Speed:** {wind_speed} mph\n"
+        f"**Wind Direction:** {wind_direction}°\n"
+        f"**Pressure at Sea Level:** {pressure_sea_level} inHg\n"
+        f"**Precipitation Intensity:** {precipitation_intensity} in/hr\n"
+        f"**Rain Intensity:** {rain_intensity} in/hr\n"
+        f"**Precipitation Probability:** {precipitation_probability}%\n"
+        f"**Precipitation Type:** {precipitation_type} (0 = No precipitation, 1 = Rain, 2 = Snow, 3 = Freezing rain, 4 = Ice pellets / sleet)\n"
+        f"**Rain Accumulation:** {rain_accumulation} in\n"
+        f"**Visibility:** {visibility} mi\n"
+        f"**Cloud Cover:** {cloud_cover}%\n"
+        f"**Cloud Base:** {cloud_base} mi\n"
+        f"**Cloud Ceiling:** {cloud_ceiling} mi\n"
+        f"**UV Index:** {uv_index} (0-2: Low, 3-5: Moderate, 6-7: High, 8-10: Very High, 11+: Extreme)\n"
+        f"**Evapotranspiration:** {evapotranspiration} in\n"
+        f"**Thunderstorm Probability:** {thunderstorm_probability}%"
+    )
+
+    discord_csv_message = recorded_message.format(date_text=date)
+
+    # configuring the Discord bot
+    load_dotenv()
+    handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    intents = discord.Intents.default()
+    intents.message_content = True
+    bot = discord.Client(intents=intents)
+    CHANNEL_ID = os.getenv('CHANNEL_ID')
+    #print(f"CHANNEL_ID: {CHANNEL_ID}\n")
+    #print(f"CHANNEL: {channel}\n")
+
+    # Discord bot events and commands
+    @bot.event
+    async def on_ready():
+        print(f"\nWe have logged in as {bot.user}\n")
+
+        channel = bot.get_channel(CHANNEL_ID)
+
+        if (channel is None):
+            channel = await bot.fetch_channel(CHANNEL_ID)
+
+        # send the Discord message
+        #message.channel.send(discord_message)
+        #message.channel.send(discord_csv_message)
+        if (channel):
+            await channel.send(discord_message)
+            await channel.send(discord_csv_message)
+        else:
+            print("Channel not found. Unable to send Discord message.\n")
+
+        # close the Discord bot after sending the message
+        await bot.close()
+
+    # retrieve the token from the .env file
+    token = os.getenv('DISCORD_TOKEN')
+    if not token:
+        print("\nDISCORD_TOKEN not set in .env. Aborting Discord bot startup.\n")
+        return
+    
+    # run the Discord bot
+    bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+
+    return
 
 def write_to_csv_file():
-    global csv_file_path
+    global csv_file_path, recorded_message
     csv_file_path = 'phoenix_weather_data.csv'
 
     # check if the CSV file exists. else, create the CSV file.
@@ -15,7 +88,10 @@ def write_to_csv_file():
             writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             writer.writerow(['Date (YYYY-MM-DD)', 'Time (HH:MM:SS)', 'Temperature (F)', 'Dew Point (F)', 'Humidity (%)', 'Wind Speed (mph)', 'Wind Direction (degrees)', 'Pressure at Sea Level (inHg)', 'Precipitation Intensity (in/hr)', 'Rain Intensity (in/hr)', 'Precipitation Probability (%)', 'Precipitation Type', 'Rain Accumulation (in)', 'Visibility (mi)', 'Cloud Cover (%)', 'Cloud Base (mi)', 'Cloud Ceiling (mi)', 'UV Index', 'Evapotranspiration (in)', 'Thunderstorm Probability (%)'])
             writer.writerow([date, time, temperature, dew_point, humidity, wind_speed, wind_direction, pressure_sea_level, precipitation_intensity, rain_intensity, precipitation_probability, precipitation_type, rain_accumulation, visibility, cloud_cover, cloud_base, cloud_ceiling, uv_index, evapotranspiration, thunderstorm_probability])
-            print(f"\nSuccessfully created new CSV file. Today's ({date}) data has been recorded in the CSV file.\n")
+            recorded_message = "Successfully created new CSV file. Today's ({date_text}) data in Phoenix (at the State Farm Stadium) has been recorded in the CSV file."
+            #print("\n")
+            print(recorded_message.format(date_text=date))
+            #print("\n")
     else:
         # check if today's data has already been recorded. else, store today's data in the CSV file.
         recorded = False
@@ -24,7 +100,10 @@ def write_to_csv_file():
             for row in reader:
                 if (row[0] == date):
                     recorded = True
-                    print(f"\nToday's ({date}) data has already been recorded in the CSV file. Ignoring entry...\n")
+                    recorded_message = "Today's ({date_text}) data in Phoenix (at the State Farm Stadium) has already been recorded in the CSV file. Ignoring entry..."
+                    #print("\n")
+                    print(recorded_message.format(date_text=date))
+                    #print("\n")
                     break
         
         # check if today's data has not been recorded
@@ -33,7 +112,10 @@ def write_to_csv_file():
             with open(csv_file_path, mode='a', newline='') as csv_file:
                 writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
                 writer.writerow([date, time, temperature, dew_point, humidity, wind_speed, wind_direction, pressure_sea_level, precipitation_intensity, rain_intensity, precipitation_probability, precipitation_type, rain_accumulation, visibility, cloud_cover, cloud_base, cloud_ceiling, uv_index, evapotranspiration, thunderstorm_probability])
-                print(f"\nToday's ({date}) data has been recorded in the CSV file.\n")
+                recorded_message = "Today's ({date_text}) data in Phoenix (at the State Farm Stadium) has been recorded in the CSV file."
+                #print("\n")
+                print(recorded_message.format(date_text=date))
+                #print("\n")
     return
 
 def api_request():
@@ -43,16 +125,17 @@ def api_request():
 
     # grab the weather data from Tomorrow.io API
     url = "https://api.tomorrow.io/v4/timelines"
+    API_KEY = os.getenv('API_KEY')
     query = {
-        "location": "33.527283, -112.263275",   # Cardinal's Stadium coordinates
+        "location": "33.527283, -112.263275",   # State Farm Stadium coordinates
         "fields": ["temperature", "dewPoint", "humidity", "windSpeed", "windDirection", "pressureSeaLevel", "precipitationIntensity", "rainIntensity", "precipitationProbability", "precipitationType", "rainAccumulation", "visibility", "cloudCover", "cloudBase", "cloudCeiling", "uvIndex", "evapotranspiration", "thunderstormProbability"],
         "units": "imperial",
         "timesteps": "1d",
-        "apikey": ""
+        "apikey": API_KEY
     }
     response = requests.request("GET", url, params = query)
     print(response.text)
-    print("\n")
+    #print("\n")
 
     # gather the data from the API
     data = json.loads(response.text)
@@ -81,31 +164,41 @@ def api_request():
     thunderstorm_probability = data['data']['timelines'][0]['intervals'][0]['values']['thunderstormProbability']    # percentage(%)
 
     # print out the results
-    print(f"\nThe temperature in Phoenix today ({date}) at ({time}) hours is ({temperature}) degrees Fahrenheit with ({cloud_cover})% cloud cover\n")
-    print(f"Here is the rest of today's ({date}) information at ({time}) hours:")
-    print(f"Temperature: {temperature} degrees Fahrenheit")
-    print(f"Dew Point: {dew_point} degrees Fahrenheit")
-    print(f"Humidity: {humidity}%")
-    print(f"Wind Speed: {wind_speed} mph")
-    print(f"Wind Direction: {wind_direction} degrees")
-    print(f"Pressure at Sea Level: {pressure_sea_level} inHg")
-    print(f"Precipitation Intensity: {precipitation_intensity} in/hr")
-    print(f"Rain Intensity: {rain_intensity} in/hr")
-    print(f"Precipitation Probability: {precipitation_probability}%")
-    print(f"Precipitation Type: {precipitation_type} (0 = No precipitation, 1 = Rain, 2, = Snow, 3 = Freezing rain, 4 = Ice pellets / sleet)")
-    print(f"Rain Accumulation: {rain_accumulation} in")
-    print(f"Visibility: {visibility} mi")
-    print(f"Cloud Cover: {cloud_cover}%")
-    print(f"Cloud Base: {cloud_base} mi")
-    print(f"Cloud Ceiling: {cloud_ceiling} mi")
-    print(f"UV Index: {uv_index} (0-2: Low, 3-5: Moderate, 6-7: High, 8-10: Very High, 11+: Extreme)")
-    print(f"Evapotranspiration: {evapotranspiration} in")
-    print(f"Thunderstorm Probability: {thunderstorm_probability}%")
+    message = (
+        f"\nThe temperature in Phoenix (at the State Farm Stadium) today ({date}) at ({time}) hours is ({temperature}) degrees Fahrenheit with ({cloud_cover})% cloud cover\n\n"
+        f"Here is the rest of today's ({date}) information at ({time}) hours:\n"
+        f"Temperature: {temperature} degrees Fahrenheit\n"
+        f"Dew Point: {dew_point} degrees Fahrenheit\n"
+        f"Humidity: {humidity}%\n"
+        f"Wind Speed: {wind_speed} mph\n"
+        f"Wind Direction: {wind_direction} degrees\n"
+        f"Pressure at Sea Level: {pressure_sea_level} inHg\n"
+        f"Precipitation Intensity: {precipitation_intensity} in/hr\n"
+        f"Rain Intensity: {rain_intensity} in/hr\n"
+        f"Precipitation Probability: {precipitation_probability}%\n"
+        f"Precipitation Type: {precipitation_type} (0 = No precipitation, 1 = Rain, 2 = Snow, 3 = Freezing rain, 4 = Ice pellets / sleet)\n"
+        f"Rain Accumulation: {rain_accumulation} in\n"
+        f"Visibility: {visibility} mi\n"
+        f"Cloud Cover: {cloud_cover}%\n"
+        f"Cloud Base: {cloud_base} mi\n"
+        f"Cloud Ceiling: {cloud_ceiling} mi\n"
+        f"UV Index: {uv_index} (0-2: Low, 3-5: Moderate, 6-7: High, 8-10: Very High, 11+: Extreme)\n"
+        f"Evapotranspiration: {evapotranspiration} in\n"
+        f"Thunderstorm Probability: {thunderstorm_probability}%\n"
+    )
+    print(message)
+
     return
 
 def main():
+    # collecting data from the API and storing it in a CSV file
     api_request()
     write_to_csv_file()
+
+    # have Discord bot notify me when the weather data has been recorded
+    discord_bot_notification()
+
     return
     
 main()
+exit()
