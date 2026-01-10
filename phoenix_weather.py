@@ -243,8 +243,8 @@ def main():
     # get the current hour (24-hour format)
     current_hour = datetime.now().hour
 
-    # if it is 1 PM or 9 PM, then run the script
-    if ((current_hour == 13) or (current_hour == 21)):
+    # if it is 1 PM or 9 PM (in pacific time), then run the script
+    if ((current_hour == 12) or (current_hour == 20)):
         # load environment variables from .env
         load_dotenv()
 
