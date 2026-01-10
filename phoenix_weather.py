@@ -10,7 +10,6 @@ from discord.ext import tasks, commands
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
-from flask import Flask
 
 def write_to_google_sheets():
     # google sheets API setup
@@ -263,10 +262,5 @@ def main():
     
     return
 
-app = Flask(__name__)
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
     main()
-
-#main()
