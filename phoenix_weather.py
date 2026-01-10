@@ -7,6 +7,47 @@ import discord
 from dotenv import load_dotenv
 import logging
 from discord.ext import tasks, commands
+import gspread
+from google.oauth2.service_account import Credentials
+
+def write_to_google_sheets():
+    # google sheets API setup
+    SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+    SERVICE_ACCOUNT_FILE = 'credentials.json'
+    creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    client = gspread.authorize(creds)
+
+    # open google sheet by sheet ID
+    SHEET_ID = "1NyhVq23QQkYJ9ien5AFakH_HvffA_gpQdy3bAB43zMs"
+    #sheet = client.open_by_key(SHEET_ID)
+    #values_list = sheet.sheet1.row_values(1)
+    #print(values_list)
+    workbook = client.open_by_key(SHEET_ID)
+    #print(workbook)
+    worksheet = workbook.worksheet("Phoenix Weather Data")
+
+    # check if header row exists and add it into spreadsheet if it doesn't exist
+    header_row = ['Date (YYYY-MM-DD)', 'Time (HH:MM:SS)', 'Temperature (F)', 'Dew Point (F)', 'Humidity (%)', 'Wind Speed (mph)', 'Wind Direction (degrees)', 'Pressure at Sea Level (inHg)', 'Precipitation Intensity (in/hr)', 'Rain Intensity (in/hr)', 'Precipitation Probability (%)', 'Precipitation Type', 'Rain Accumulation (in)', 'Visibility (mi)', 'Cloud Cover (%)', 'Cloud Base (mi)', 'Cloud Ceiling (mi)', 'UV Index', 'Evapotranspiration (in)', 'Thunderstorm Probability (%)']
+    existing_header = worksheet.row_values(1)
+    if (existing_header != header_row):
+        worksheet.insert_row(header_row, 1)
+        print("Header row added to Google Sheets.\n")
+    else:
+        print("Header row already exists in Google Sheets.\n")
+
+    # # check if today's data was appended to the spreadsheet, if not then append it
+    existing_dates = worksheet.col_values(1)
+    global google_flag
+    if (date in existing_dates):
+        print(f"Today's data for ({date}) in Phoenix (at the State Farm Stadium) already exists in Google Sheets. Ignoring entry...\n")
+        google_flag = True
+    else:
+        row_data = [date, time, temperature, dew_point, humidity, wind_speed, wind_direction, pressure_sea_level, precipitation_intensity, rain_intensity, precipitation_probability, precipitation_type, rain_accumulation, visibility, cloud_cover, cloud_base, cloud_ceiling, uv_index, evapotranspiration, thunderstorm_probability]
+        worksheet.append_row(row_data)
+        print(f"Today's data for ({date}) in Phoenix (at the State Farm Stadium) has been written to Google Sheets.\n")
+        google_flag = False
+
+    return
 
 def discord_bot_notification():
     # prepare the Discord message
@@ -46,7 +87,7 @@ def discord_bot_notification():
     #print(f"CHANNEL: {channel}\n")
 
     # Discord bot events and commands
-    @bot.event
+    #@bot.event
     @tasks.loop(hours=6)
     async def on_ready():
         print(f"\nWe have logged in as {bot.user}\n")
@@ -60,8 +101,14 @@ def discord_bot_notification():
         #message.channel.send(discord_message)
         #message.channel.send(discord_csv_message)
         if (channel):
-            await channel.send(discord_message)
-            await channel.send(discord_csv_message)
+            # if Discord message has not been sent to Discord for today, then send it
+            if (google_flag == False):
+                await channel.send(discord_message)
+                await channel.send(discord_csv_message)
+            else:
+                discord_message = "Today's data for {date_text} in Phoenix (at the State Farm Stadium) already exists in Google Sheets. Ignoring entry...\n"
+                discord_message = discord_message.format(date_text=date)
+                await channel.send(discord_message)
         else:
             print("Channel not found. Unable to send Discord message.\n")
 
@@ -90,7 +137,7 @@ def write_to_csv_file():
             writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             writer.writerow(['Date (YYYY-MM-DD)', 'Time (HH:MM:SS)', 'Temperature (F)', 'Dew Point (F)', 'Humidity (%)', 'Wind Speed (mph)', 'Wind Direction (degrees)', 'Pressure at Sea Level (inHg)', 'Precipitation Intensity (in/hr)', 'Rain Intensity (in/hr)', 'Precipitation Probability (%)', 'Precipitation Type', 'Rain Accumulation (in)', 'Visibility (mi)', 'Cloud Cover (%)', 'Cloud Base (mi)', 'Cloud Ceiling (mi)', 'UV Index', 'Evapotranspiration (in)', 'Thunderstorm Probability (%)'])
             writer.writerow([date, time, temperature, dew_point, humidity, wind_speed, wind_direction, pressure_sea_level, precipitation_intensity, rain_intensity, precipitation_probability, precipitation_type, rain_accumulation, visibility, cloud_cover, cloud_base, cloud_ceiling, uv_index, evapotranspiration, thunderstorm_probability])
-            recorded_message = "Successfully created new CSV file. Today's ({date_text}) data in Phoenix (at the State Farm Stadium) has been recorded in the CSV file."
+            recorded_message = "Successfully created new CSV file. Today's data for ({date_text}) in Phoenix (at the State Farm Stadium) has been recorded in the CSV file.\n"
             #print("\n")
             print(recorded_message.format(date_text=date))
             #print("\n")
@@ -102,7 +149,7 @@ def write_to_csv_file():
             for row in reader:
                 if (row[0] == date):
                     recorded = True
-                    recorded_message = "Today's ({date_text}) data in Phoenix (at the State Farm Stadium) has already been recorded in the CSV file. Ignoring entry..."
+                    recorded_message = "Today's data for ({date_text}) in Phoenix (at the State Farm Stadium) has already been recorded in the CSV file. Ignoring entry...\n"
                     #print("\n")
                     print(recorded_message.format(date_text=date))
                     #print("\n")
@@ -114,7 +161,7 @@ def write_to_csv_file():
             with open(csv_file_path, mode='a', newline='') as csv_file:
                 writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
                 writer.writerow([date, time, temperature, dew_point, humidity, wind_speed, wind_direction, pressure_sea_level, precipitation_intensity, rain_intensity, precipitation_probability, precipitation_type, rain_accumulation, visibility, cloud_cover, cloud_base, cloud_ceiling, uv_index, evapotranspiration, thunderstorm_probability])
-                recorded_message = "Today's ({date_text}) data in Phoenix (at the State Farm Stadium) has been recorded in the CSV file."
+                recorded_message = "Today's data for ({date_text}) in Phoenix (at the State Farm Stadium) has been recorded in the CSV file.\n"
                 #print("\n")
                 print(recorded_message.format(date_text=date))
                 #print("\n")
@@ -193,13 +240,16 @@ def api_request():
     return
 
 def main():
-    # collecting data from the API and storing it in a CSV file
+    # collecting data from the API
     api_request()
-    write_to_csv_file()
+
+    # write the data to a CSV file
+    write_to_csv_file()         # this doesn't work in Render.com because of file system restrictions
+    write_to_google_sheets()    # using this instead since it's easier to manage an online spreadsheet
 
     # have Discord bot notify me when the weather data has been recorded
     discord_bot_notification()
-
+    
     return
     
 main()
