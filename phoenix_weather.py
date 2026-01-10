@@ -6,6 +6,7 @@ import os
 import discord
 from dotenv import load_dotenv
 import logging
+from discord.ext import tasks, commands
 
 def discord_bot_notification():
     # prepare the Discord message
@@ -46,6 +47,7 @@ def discord_bot_notification():
 
     # Discord bot events and commands
     @bot.event
+    @tasks.loop(hours=6)
     async def on_ready():
         print(f"\nWe have logged in as {bot.user}\n")
 
@@ -201,4 +203,3 @@ def main():
     return
     
 main()
-exit()
